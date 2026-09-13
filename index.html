@@ -1195,11 +1195,10 @@
             await banco.collection(colecao).doc(String(registro.id)).set(registro);
           }
         }
-
         return true;
       } catch (erro) {
         console.error("Erro ao salvar no Firebase:", erro);
-        alert("O cadastro foi salvo neste navegador, mas NÃO foi enviado ao Firebase.\n\nErro: " + (erro.message || erro));
+        alert("Não foi possível concluir a operação no Firebase.\n\nErro: " + (erro.message || erro));
         return false;
       }
     }
@@ -1399,11 +1398,49 @@
     const buscaMembro = document.getElementById("buscaMembro");
     if (buscaMembro) buscaMembro.addEventListener("input", renderizarMembros);
 
-    function excluir(tipo, id) {
+    async function excluir(tipo, id) {
       if (!confirm("Deseja realmente excluir este registro?")) return;
 
-      dados[tipo] = dados[tipo].filter(item => item.id !== id);
-      salvar();
+      const idTexto = String(id);
+      const colecoesFirebase = ["receitas", "despesas", "ofertas", "bingo", "leilao", "barraca"];
+
+      try {
+        dados[tipo] = (dados[tipo] || []).filter(item => String(item.id) !== idTexto);
+        localStorage.setItem("sistemaIgrejaDados", JSON.stringify(dados));
+        atualizarTudo();
+
+        if (colecoesFirebase.includes(tipo)) {
+          await banco.collection(tipo).doc(idTexto).delete();
+        }
+
+        alert("Registro excluído com sucesso!");
+      } catch (erro) {
+        console.error("Erro ao excluir:", erro);
+        alert("Não foi possível excluir do Firebase.\n\nErro: " + (erro.message || erro));
+        await carregarFirebase();
+      }
+    }
+
+    async function editar(tipo, id) {
+      const item = (dados[tipo] || []).find(registro => String(registro.id) === String(id));
+      if (!item) return alert("Registro não encontrado.");
+
+      const campos = Object.keys(item).filter(campo => campo !== "id");
+      const alterado = { ...item };
+
+      for (const campo of campos) {
+        const resposta = prompt("Editar " + campo + ":", alterado[campo] ?? "");
+        if (resposta === null) return;
+        alterado[campo] = campo === "valor" || campo === "total" || campo === "meta" || campo === "arrecadado" || campo === "quantidade"
+          ? Number(resposta)
+          : resposta;
+      }
+
+      const indice = dados[tipo].findIndex(registro => String(registro.id) === String(id));
+      dados[tipo][indice] = alterado;
+
+      const salvou = await salvar();
+      if (salvou) alert("Registro editado e salvo no Firebase!");
     }
 
     function renderizarReceitas() {
@@ -1415,6 +1452,7 @@
             <td>${escapar(item.categoria)}</td>
             <td>${moeda(item.valor)}</td>
             <td>
+              <button class="small-btn" onclick="editar('receitas', ${item.id})">Editar</button>
               <button class="small-btn delete" onclick="excluir('receitas', ${item.id})">Excluir</button>
             </td>
           </tr>
@@ -1431,6 +1469,7 @@
             <td>${escapar(item.categoria)}</td>
             <td>${moeda(item.valor)}</td>
             <td>
+              <button class="small-btn" onclick="editar('despesas', ${item.id})">Editar</button>
               <button class="small-btn delete" onclick="excluir('despesas', ${item.id})">Excluir</button>
             </td>
           </tr>
@@ -1482,6 +1521,7 @@
             <td>${escapar(item.tipo)}</td>
             <td>${moeda(item.valor)}</td>
             <td>
+              <button class="small-btn" onclick="editar('dizimos', ${item.id})">Editar</button>
               <button class="small-btn delete" onclick="excluir('dizimos', ${item.id})">Excluir</button>
             </td>
           </tr>
@@ -1631,7 +1671,8 @@
 
     function renderizarOfertas() {
       tabelaofertas.innerHTML = dados.ofertas.length ? dados.ofertas.map(item => `
-        <tr><td>${escapar(item.descricao)}</td><td>${moeda(item.valor)}</td><td>${escapar(item.data)}</td><td>${escapar(item.mes)}</td><td><button class="small-btn delete" onclick="excluir('ofertas', ${item.id})">Excluir</button></td></tr>`).join("") : `<tr><td colspan="5" class="empty">Nenhuma entrada registrada.</td></tr>`;
+        <tr><td>${escapar(item.descricao)}</td><td>${moeda(item.valor)}</td><td>${escapar(item.data)}</td><td>${escapar(item.mes)}</td><td><button class="small-btn" onclick="editar('ofertas', ${item.id})">Editar</button>
+              <button class="small-btn delete" onclick="excluir('ofertas', ${item.id})">Excluir</button></td></tr>`).join("") : `<tr><td colspan="5" class="empty">Nenhuma entrada registrada.</td></tr>`;
     }
 
     document.getElementById("formBingo").addEventListener("submit", event => {
@@ -1642,7 +1683,8 @@
 
     function renderizarBingo() {
       tabelabingo.innerHTML = dados.bingo.length ? dados.bingo.map(item => `
-        <tr><td>${escapar(item.descricao)}</td><td>${moeda(item.valor)}</td><td>${escapar(item.data)}</td><td>${escapar(item.mes)}</td><td><button class="small-btn delete" onclick="excluir('bingo', ${item.id})">Excluir</button></td></tr>`).join("") : `<tr><td colspan="5" class="empty">Nenhuma entrada registrada.</td></tr>`;
+        <tr><td>${escapar(item.descricao)}</td><td>${moeda(item.valor)}</td><td>${escapar(item.data)}</td><td>${escapar(item.mes)}</td><td><button class="small-btn" onclick="editar('bingo', ${item.id})">Editar</button>
+              <button class="small-btn delete" onclick="excluir('bingo', ${item.id})">Excluir</button></td></tr>`).join("") : `<tr><td colspan="5" class="empty">Nenhuma entrada registrada.</td></tr>`;
     }
 
     document.getElementById("formLeilao").addEventListener("submit", event => {
@@ -1653,7 +1695,8 @@
 
     function renderizarLeilao() {
       tabelaleilao.innerHTML = dados.leilao.length ? dados.leilao.map(item => `
-        <tr><td>${escapar(item.descricao)}</td><td>${moeda(item.valor)}</td><td>${escapar(item.data)}</td><td>${escapar(item.mes)}</td><td><button class="small-btn delete" onclick="excluir('leilao', ${item.id})">Excluir</button></td></tr>`).join("") : `<tr><td colspan="5" class="empty">Nenhuma entrada registrada.</td></tr>`;
+        <tr><td>${escapar(item.descricao)}</td><td>${moeda(item.valor)}</td><td>${escapar(item.data)}</td><td>${escapar(item.mes)}</td><td><button class="small-btn" onclick="editar('leilao', ${item.id})">Editar</button>
+              <button class="small-btn delete" onclick="excluir('leilao', ${item.id})">Excluir</button></td></tr>`).join("") : `<tr><td colspan="5" class="empty">Nenhuma entrada registrada.</td></tr>`;
     }
 
     document.getElementById("formBarraca").addEventListener("submit", event => {
@@ -1664,7 +1707,8 @@
 
     function renderizarBarraca() {
       tabelabarraca.innerHTML = dados.barraca.length ? dados.barraca.map(item => `
-        <tr><td>${escapar(item.descricao)}</td><td>${moeda(item.valor)}</td><td>${escapar(item.data)}</td><td>${escapar(item.mes)}</td><td><button class="small-btn delete" onclick="excluir('barraca', ${item.id})">Excluir</button></td></tr>`).join("") : `<tr><td colspan="5" class="empty">Nenhuma entrada registrada.</td></tr>`;
+        <tr><td>${escapar(item.descricao)}</td><td>${moeda(item.valor)}</td><td>${escapar(item.data)}</td><td>${escapar(item.mes)}</td><td><button class="small-btn" onclick="editar('barraca', ${item.id})">Editar</button>
+              <button class="small-btn delete" onclick="excluir('barraca', ${item.id})">Excluir</button></td></tr>`).join("") : `<tr><td colspan="5" class="empty">Nenhuma entrada registrada.</td></tr>`;
     }
 
     
