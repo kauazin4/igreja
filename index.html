@@ -1,0 +1,1758 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema de Gestão da Igreja</title>
+
+  <style>
+    :root {
+      --bg: #10131a;
+      --sidebar: #171b24;
+      --card: #1d2330;
+      --card2: #252c3a;
+      --text: #f4f7fb;
+      --muted: #aab4c5;
+      --primary: #6c63ff;
+      --primary-dark: #5148e8;
+      --success: #25c48a;
+      --danger: #ff5d73;
+      --warning: #f6b73c;
+      --border: #30394a;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+      border: none;
+    }
+
+    .app {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      width: 260px;
+      background: var(--sidebar);
+      border-right: 1px solid var(--border);
+      padding: 22px 14px;
+      position: fixed;
+      inset: 0 auto 0 0;
+      overflow-y: auto;
+      z-index: 10;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 12px 24px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 18px;
+    }
+
+    .brand-icon {
+      width: 44px;
+      height: 44px;
+      display: grid;
+      place-items: center;
+      border-radius: 14px;
+      background: linear-gradient(135deg, var(--primary), #9a75ff);
+      font-size: 24px;
+    }
+
+    .brand h1 {
+      font-size: 16px;
+      line-height: 1.3;
+    }
+
+    .brand span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .menu-title {
+      color: var(--muted);
+      font-size: 11px;
+      text-transform: uppercase;
+      margin: 20px 12px 8px;
+      letter-spacing: 1px;
+    }
+
+    .menu button {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      padding: 12px;
+      margin: 4px 0;
+      color: var(--muted);
+      background: transparent;
+      border-radius: 10px;
+      text-align: left;
+      transition: .2s;
+    }
+
+    .menu button:hover,
+    .menu button.active {
+      background: var(--primary);
+      color: white;
+    }
+
+    .main {
+      flex: 1;
+      margin-left: 260px;
+      padding: 24px;
+      width: calc(100% - 260px);
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+      margin-bottom: 26px;
+    }
+
+    .topbar h2 {
+      font-size: 26px;
+      margin-bottom: 6px;
+    }
+
+    .topbar p {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .top-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .btn {
+      padding: 11px 15px;
+      border-radius: 9px;
+      background: var(--primary);
+      color: white;
+      font-weight: bold;
+    }
+
+    .btn:hover {
+      background: var(--primary-dark);
+    }
+
+    .btn.secondary {
+      background: var(--card2);
+      border: 1px solid var(--border);
+    }
+
+    .btn.danger {
+      background: var(--danger);
+    }
+
+    .btn.success {
+      background: var(--success);
+      color: #061c13;
+    }
+
+    .section {
+      display: none;
+    }
+
+    .section.active {
+      display: block;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 16px;
+      margin-bottom: 22px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 15px;
+      padding: 20px;
+    }
+
+    .card-label {
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 12px;
+    }
+
+    .card-value {
+      font-size: 27px;
+      font-weight: bold;
+    }
+
+    .card-small {
+      color: var(--success);
+      font-size: 12px;
+      margin-top: 8px;
+    }
+
+    .content-grid {
+      display: grid;
+      grid-template-columns: 1.4fr 1fr;
+      gap: 20px;
+    }
+
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 15px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 15px;
+      margin-bottom: 18px;
+    }
+
+    .panel-header h3 {
+      font-size: 18px;
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .form-group.full {
+      grid-column: 1 / -1;
+    }
+
+    label {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      background: var(--card2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 12px;
+      outline: none;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      border-color: var(--primary);
+    }
+
+    textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+
+    .form-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .table-wrapper {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 650px;
+    }
+
+    th,
+    td {
+      padding: 13px 10px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      font-size: 13px;
+    }
+
+    th {
+      color: var(--muted);
+      font-weight: normal;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 5px 9px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: bold;
+    }
+
+    .badge.success {
+      background: rgba(37, 196, 138, .15);
+      color: var(--success);
+    }
+
+    .badge.danger {
+      background: rgba(255, 93, 115, .15);
+      color: var(--danger);
+    }
+
+    .badge.warning {
+      background: rgba(246, 183, 60, .15);
+      color: var(--warning);
+    }
+
+    .actions {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .small-btn {
+      padding: 7px 10px;
+      border-radius: 7px;
+      background: var(--card2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      font-size: 12px;
+    }
+
+    .small-btn:hover {
+      border-color: var(--primary);
+    }
+
+    .small-btn.delete {
+      color: var(--danger);
+    }
+
+    .empty {
+      text-align: center;
+      color: var(--muted);
+      padding: 30px;
+    }
+
+    .chart {
+      position: relative;
+      display: flex;
+      align-items: end;
+      justify-content: space-evenly;
+      gap: 28px;
+      height: 250px;
+      padding: 18px 12px 0;
+      border-bottom: 2px solid var(--border);
+      background: linear-gradient(to top, rgba(255,255,255,.025), transparent 70%);
+      overflow: hidden;
+    }
+
+    .chart-grid {
+      position: absolute;
+      inset: 18px 12px 39px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .chart-grid span {
+      display: block;
+      width: 100%;
+      border-top: 1px dashed rgba(255, 255, 255, .13);
+    }
+
+    .bar-item {
+      flex: 1;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: end;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      position: relative;
+      z-index: 1;
+    }
+
+    .bar-track {
+      width: 100%;
+      max-width: 58px;
+      height: 170px;
+      display: flex;
+      align-items: end;
+      justify-content: center;
+      background: var(--card2);
+      border: 1px solid var(--border);
+      border-radius: 8px 8px 0 0;
+      overflow: hidden;
+    }
+
+    .bar {
+      width: 100%;
+      display: block;
+      background: linear-gradient(180deg, var(--primary), #9b8cff);
+      border-radius: 7px 7px 0 0;
+      min-height: 5px;
+      transition: height .25s ease;
+    }
+
+    .bar-item.expense .bar {
+      background: linear-gradient(180deg, #ff7b91, #d94d68);
+    }
+
+    .bar-label {
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .quick-actions {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    .quick-actions button {
+      background: var(--card2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 18px 10px;
+      border-radius: 10px;
+    }
+
+    .quick-actions button:hover {
+      border-color: var(--primary);
+    }
+
+    .notice {
+      padding: 14px;
+      border-radius: 10px;
+      background: rgba(108, 99, 255, .12);
+      border: 1px solid rgba(108, 99, 255, .3);
+      color: #c8c4ff;
+      margin-bottom: 15px;
+      font-size: 13px;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    @media (max-width: 1100px) {
+      .cards {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .content-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .sidebar {
+        width: 76px;
+        padding: 15px 8px;
+      }
+
+      .brand {
+        justify-content: center;
+        padding: 8px 0 20px;
+      }
+
+      .brand-text,
+      .menu-title,
+      .menu button span {
+        display: none;
+      }
+
+      .menu button {
+        justify-content: center;
+        font-size: 20px;
+      }
+
+      .main {
+        margin-left: 76px;
+        width: calc(100% - 76px);
+        padding: 15px;
+      }
+
+      .topbar {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .cards {
+        grid-template-columns: 1fr;
+      }
+
+      .quick-actions {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    #telaLogin {
+      position: fixed; inset: 0; z-index: 9999;
+      display: flex; align-items: center; justify-content: center;
+      padding: 20px; background: linear-gradient(135deg, #10131a, #252c3a);
+    }
+    .login-card {
+      width: 100%; max-width: 420px; background: #1d2330;
+      border: 1px solid #3a4355; border-radius: 18px; padding: 30px;
+      box-shadow: 0 20px 60px rgba(0,0,0,.35);
+    }
+    .login-card h1 { margin: 0 0 8px; text-align: center; }
+    .login-card p { text-align: center; color: #aab4c5; margin-bottom: 24px; }
+    .login-card input { width: 100%; box-sizing: border-box; margin-bottom: 14px; }
+    .login-card button { width: 100%; }
+    #erroLogin { color: #ff5d73; text-align: center; margin-top: 14px; min-height: 20px; }
+    #appPrincipal { display: none; }
+    .btn-sair { margin-top: 18px; width: 100%; }
+  </style>
+</head>
+
+<body>
+  <div id="telaLogin">
+    <div class="login-card">
+      <h1>⛪ Acesso ao sistema</h1>
+      <p>Capela São Miguel Arcanjo</p>
+      <form id="formLogin">
+        <input id="loginEmail" type="email" placeholder="E-mail" required autocomplete="username">
+        <input id="loginSenha" type="password" placeholder="Senha" required autocomplete="current-password">
+        <button class="btn" type="submit">Entrar</button>
+      </form>
+      <div id="erroLogin"></div>
+    </div>
+  </div>
+
+  <div class="app" id="appPrincipal">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-icon">⛪</div>
+        <div class="brand-text">
+          <h1>Gestão da Igreja</h1>
+          <span>Capela São Miguel Arcanjo</span>
+        </div>
+      </div>
+
+      <nav class="menu">
+        <div class="menu-title">Principal</div>
+
+        <button class="active" data-section="dashboard">
+          📊 <span>Dashboard</span>
+        </button>
+
+        <button data-section="caixa">
+          💰 <span>Caixa</span>
+        </button>
+
+        <button data-section="receitas">
+          📈 <span>Receitas</span>
+        </button>
+
+        <button data-section="despesas">
+          📉 <span>Despesas</span>
+        </button>
+
+        <button data-section="contas">
+          🧾 <span>Contas a pagar</span>
+        </button>
+
+        <button data-section="relatorios">
+          📋 <span>Relatórios</span>
+        </button>
+
+        <div class="menu-title">Comunidade</div>
+<button data-section="ofertas">
+          💰 <span>Ofertas</span>
+        </button>
+
+        <button data-section="bingo">
+          🎟️ <span>Bingo</span>
+        </button>
+
+        <button data-section="leilao">
+          🔨 <span>Leilão</span>
+        </button>
+
+        <button data-section="barraca">
+          🏕️ <span>Barraca</span>
+        </button>
+<div class="menu-title">Administração</div>
+
+        <button data-section="configuracoes">
+          ⚙️ <span>Configurações</span>
+        </button>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <h2 id="page-title">Dashboard</h2>
+          <p id="page-description">Visão geral da administração da igreja.</p>
+        </div>
+
+        <div class="top-actions">
+          <button class="btn secondary" onclick="exportarDados()">⬇ Exportar dados</button>
+          <button class="btn" onclick="abrirSecao('configuracoes')">⚙ Configurações</button>
+          <button class="btn secondary" id="btnSair">↪ Sair</button>
+        </div>
+      </header>
+
+      <section class="section active" id="dashboard">
+        <div class="cards">
+          <div class="card">
+            <div class="card-label">Saldo atual</div>
+            <div class="card-value" id="dashSaldo">R$ 0,00</div>
+            <div class="card-small">Saldo calculado</div>
+          </div>
+
+          <div class="card">
+            <div class="card-label">Receitas</div>
+            <div class="card-value" id="dashReceitas">R$ 0,00</div>
+            <div class="card-small">Total registrado</div>
+          </div>
+
+          <div class="card">
+            <div class="card-label">Despesas</div>
+            <div class="card-value" id="dashDespesas">R$ 0,00</div>
+            <div class="card-small">Total registrado</div>
+          </div>
+
+        </div>
+
+        <div class="content-grid">
+          <div class="panel">
+            <div class="panel-header">
+              <h3>Movimentação financeira</h3>
+              <span class="muted">Resumo</span>
+            </div>
+
+            <div class="chart" id="graficoFinanceiro"></div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <h3>Ações rápidas</h3>
+            </div>
+
+            <div class="quick-actions">
+              <button onclick="abrirSecao('receitas')">➕ Nova receita</button>
+              <button onclick="abrirSecao('despesas')">➖ Nova despesa</button>
+                            <button onclick="abrirSecao('relatorios')">📋 Ver relatórios</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <h3>Últimas movimentações</h3>
+          </div>
+
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Descrição</th>
+                  <th>Tipo</th>
+                  <th>Valor</th>
+                </tr>
+              </thead>
+              <tbody id="ultimasMovimentacoes"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="caixa">
+        <div class="cards">
+          <div class="card">
+            <div class="card-label">Saldo disponível</div>
+            <div class="card-value" id="caixaSaldo">R$ 0,00</div>
+          </div>
+          <div class="card">
+            <div class="card-label">Total de entradas</div>
+            <div class="card-value" id="caixaEntradas">R$ 0,00</div>
+          </div>
+          <div class="card">
+            <div class="card-label">Total de saídas</div>
+            <div class="card-value" id="caixaSaidas">R$ 0,00</div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <h3>Movimentações do caixa</h3>
+            <button class="btn" onclick="abrirSecao('receitas')">Nova entrada</button>
+          </div>
+
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Descrição</th>
+                  <th>Categoria</th>
+                  <th>Tipo</th>
+                  <th>Valor</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="tabelaCaixa"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="receitas">
+        <div class="panel">
+          <div class="panel-header">
+            <h3>Cadastrar receita</h3>
+          </div>
+
+          <form id="formReceita">
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Descrição</label>
+                <input id="receitaDescricao" required>
+              </div>
+
+              <div class="form-group">
+                <label>Valor</label>
+                <input id="receitaValor" type="number" step="0.01" min="0" required>
+              </div>
+
+              <div class="form-group">
+                <label>Categoria</label>
+                <select id="receitaCategoria">
+                  <option>Dízimo</option>
+                  <option>Oferta</option>
+                  <option>Doação</option>
+                  <option>Evento</option>
+                  <option>Leilão</option>
+                  <option>Cantina</option>
+                  <option>Campanha</option>
+                  <option>Outros</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label>Data</label>
+                <input id="receitaData" type="date" required>
+              </div>
+
+              <div class="form-group full">
+                <label>Observação</label>
+                <textarea id="receitaObservacao"></textarea>
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button class="btn" type="submit">Salvar receita</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <h3>Receitas registradas</h3>
+          </div>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Descrição</th>
+                  <th>Categoria</th>
+                  <th>Valor</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="tabelaReceitas"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="despesas">
+        <div class="panel">
+          <div class="panel-header">
+            <h3>Cadastrar despesa</h3>
+          </div>
+
+          <form id="formDespesa">
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Descrição</label>
+                <input id="despesaDescricao" required>
+              </div>
+
+              <div class="form-group">
+                <label>Valor</label>
+                <input id="despesaValor" type="number" step="0.01" min="0" required>
+              </div>
+
+              <div class="form-group">
+                <label>Categoria</label>
+                <select id="despesaCategoria">
+                  <option>Água</option>
+                  <option>Energia</option>
+                  <option>Manutenção</option>
+                  <option>Material litúrgico</option>
+                  <option>Alimentação</option>
+                  <option>Transporte</option>
+                  <option>Salários</option>
+                  <option>Outros</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label>Data</label>
+                <input id="despesaData" type="date" required>
+              </div>
+
+              <div class="form-group full">
+                <label>Observação</label>
+                <textarea id="despesaObservacao"></textarea>
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button class="btn" type="submit">Salvar despesa</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <h3>Despesas registradas</h3>
+          </div>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Descrição</th>
+                  <th>Categoria</th>
+                  <th>Valor</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="tabelaDespesas"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="contas">
+        <div class="panel">
+          <div class="panel-header">
+            <h3>Contas a pagar</h3>
+          </div>
+
+          <form id="formConta">
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Descrição</label>
+                <input id="contaDescricao" required>
+              </div>
+
+              <div class="form-group">
+                <label>Valor</label>
+                <input id="contaValor" type="number" step="0.01" min="0" required>
+              </div>
+
+              <div class="form-group">
+                <label>Vencimento</label>
+                <input id="contaVencimento" type="date" required>
+              </div>
+
+              <div class="form-group">
+                <label>Status</label>
+                <select id="contaStatus">
+                  <option>Pendente</option>
+                  <option>Pago</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button class="btn" type="submit">Salvar conta</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <h3>Contas cadastradas</h3>
+          </div>
+
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Descrição</th>
+                  <th>Vencimento</th>
+                  <th>Valor</th>
+                  <th>Status</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="tabelaContas"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="relatorios">
+        <div class="panel">
+          <div class="panel-header">
+            <h3>Relatório financeiro</h3>
+            <button class="btn" onclick="imprimirRelatorio()">🖨 Imprimir</button>
+          </div>
+
+          <div id="relatorioFinanceiro"></div>
+        </div>
+      </section>
+<section class="section" id="ofertas">
+        <div class="panel">
+          <div class="panel-header"><h3>Registro de ofertas</h3></div>
+          <form id="formOfertas">
+            <div class="form-grid">
+              <div class="form-group"><label>Descrição</label><input id="ofertasDescricao" required></div>
+              <div class="form-group"><label>Valor</label><input id="ofertasValor" type="number" step="0.01" min="0" required></div>
+              <div class="form-group"><label>Data</label><input id="ofertasData" type="date" required></div>
+              <div class="form-group"><label>Mês de referência</label><input id="ofertasMes" type="month" required></div>
+            </div>
+            <div class="form-actions"><button class="btn" type="submit">Registrar entrada</button></div>
+          </form>
+        </div>
+        <div class="panel"><div class="panel-header"><h3>Histórico de ofertas</h3></div>
+          <div class="table-wrapper"><table><thead><tr><th>Descrição</th><th>Valor</th><th>Data</th><th>Mês</th><th>Ações</th></tr></thead><tbody id="tabelaofertas"></tbody></table></div>
+        </div>
+      </section>
+
+      <section class="section" id="bingo">
+        <div class="panel">
+          <div class="panel-header"><h3>Registro de bingo</h3></div>
+          <form id="formBingo">
+            <div class="form-grid">
+              <div class="form-group"><label>Descrição</label><input id="bingoDescricao" required></div>
+              <div class="form-group"><label>Valor</label><input id="bingoValor" type="number" step="0.01" min="0" required></div>
+              <div class="form-group"><label>Data</label><input id="bingoData" type="date" required></div>
+              <div class="form-group"><label>Mês de referência</label><input id="bingoMes" type="month" required></div>
+            </div>
+            <div class="form-actions"><button class="btn" type="submit">Registrar entrada</button></div>
+          </form>
+        </div>
+        <div class="panel"><div class="panel-header"><h3>Histórico de bingo</h3></div>
+          <div class="table-wrapper"><table><thead><tr><th>Descrição</th><th>Valor</th><th>Data</th><th>Mês</th><th>Ações</th></tr></thead><tbody id="tabelabingo"></tbody></table></div>
+        </div>
+      </section>
+
+      <section class="section" id="leilao">
+        <div class="panel">
+          <div class="panel-header"><h3>Registro de leilão</h3></div>
+          <form id="formLeilao">
+            <div class="form-grid">
+              <div class="form-group"><label>Descrição</label><input id="leilaoDescricao" required></div>
+              <div class="form-group"><label>Valor</label><input id="leilaoValor" type="number" step="0.01" min="0" required></div>
+              <div class="form-group"><label>Data</label><input id="leilaoData" type="date" required></div>
+              <div class="form-group"><label>Mês de referência</label><input id="leilaoMes" type="month" required></div>
+            </div>
+            <div class="form-actions"><button class="btn" type="submit">Registrar entrada</button></div>
+          </form>
+        </div>
+        <div class="panel"><div class="panel-header"><h3>Histórico de leilão</h3></div>
+          <div class="table-wrapper"><table><thead><tr><th>Descrição</th><th>Valor</th><th>Data</th><th>Mês</th><th>Ações</th></tr></thead><tbody id="tabelaleilao"></tbody></table></div>
+        </div>
+      </section>
+
+      <section class="section" id="barraca">
+        <div class="panel">
+          <div class="panel-header"><h3>Registro de barraca</h3></div>
+          <form id="formBarraca">
+            <div class="form-grid">
+              <div class="form-group"><label>Descrição</label><input id="barracaDescricao" required></div>
+              <div class="form-group"><label>Valor</label><input id="barracaValor" type="number" step="0.01" min="0" required></div>
+              <div class="form-group"><label>Data</label><input id="barracaData" type="date" required></div>
+              <div class="form-group"><label>Mês de referência</label><input id="barracaMes" type="month" required></div>
+            </div>
+            <div class="form-actions"><button class="btn" type="submit">Registrar entrada</button></div>
+          </form>
+        </div>
+        <div class="panel"><div class="panel-header"><h3>Histórico de barraca</h3></div>
+          <div class="table-wrapper"><table><thead><tr><th>Descrição</th><th>Valor</th><th>Data</th><th>Mês</th><th>Ações</th></tr></thead><tbody id="tabelabarraca"></tbody></table></div>
+        </div>
+      </section>
+      <section class="section" id="configuracoes">
+        <div class="panel">
+          <div class="panel-header">
+            <h3>Configurações da comunidade</h3>
+          </div>
+
+          <form id="formConfiguracoes">
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Nome da igreja/capela</label>
+                <input id="configNome">
+              </div>
+
+              <div class="form-group">
+                <label>Comunidade</label>
+                <input id="configComunidade">
+              </div>
+
+              <div class="form-group">
+                <label>Coordenador</label>
+                <input id="configCoordenador">
+              </div>
+
+              <div class="form-group">
+                <label>Tesoureiro</label>
+                <input id="configTesoureiro">
+              </div>
+
+              <div class="form-group full">
+                <label>Endereço</label>
+                <input id="configEndereco">
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button class="btn" type="submit">Salvar configurações</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <h3>Backup</h3>
+          </div>
+
+          <div class="notice">
+            Os dados ficam salvos neste navegador. Faça exportações frequentes para manter uma cópia de segurança.
+          </div>
+
+          <button class="btn" onclick="exportarDados()">Exportar backup</button>
+          <button class="btn secondary" onclick="importarDados()">Importar backup</button>
+          <input type="file" id="arquivoImportacao" accept=".json" class="hidden">
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyB2Kd9o45pxEuNilaVkJ8260sDcC6hYU4o",
+      authDomain: "igreja-1531a.firebaseapp.com",
+      projectId: "igreja-1531a",
+      storageBucket: "igreja-1531a.firebasestorage.app",
+      messagingSenderId: "700184422555",
+      appId: "1:700184422555:web:77a7b545f4a5acd7297e3e"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const banco = firebase.firestore();
+    const autenticacao = firebase.auth();
+
+    const telaLogin = document.getElementById("telaLogin");
+    const appPrincipal = document.getElementById("appPrincipal");
+    const formLogin = document.getElementById("formLogin");
+    const erroLogin = document.getElementById("erroLogin");
+
+    autenticacao.onAuthStateChanged(usuario => {
+      if (usuario) {
+        telaLogin.style.display = "none";
+        appPrincipal.style.display = "flex";
+        erroLogin.textContent = "";
+        atualizarTudo();
+        carregarFirebase();
+      } else {
+        telaLogin.style.display = "flex";
+        appPrincipal.style.display = "none";
+      }
+    });
+
+    formLogin.addEventListener("submit", async event => {
+      event.preventDefault();
+      erroLogin.textContent = "Entrando...";
+      try {
+        await autenticacao.signInWithEmailAndPassword(
+          document.getElementById("loginEmail").value.trim(),
+          document.getElementById("loginSenha").value
+        );
+      } catch (erro) {
+        erroLogin.textContent = "E-mail ou senha incorretos.";
+        console.error(erro);
+      }
+    });
+
+    document.getElementById("btnSair").addEventListener("click", () => autenticacao.signOut());
+
+    const estadoInicial = {
+      receitas: [],
+      despesas: [],
+      contas: [],
+      dizimos: [],
+      ofertas: [],
+      bingo: [],
+      leilao: [],
+      barraca: [],
+      estoque: [],
+      configuracoes: {
+        nome: "Capela São Miguel Arcanjo",
+        comunidade: "Comunidade Goiabeira",
+        coordenador: "",
+        tesoureiro: "",
+        endereco: ""
+      }
+    };
+
+    const dadosSalvos = JSON.parse(localStorage.getItem("sistemaIgrejaDados")) || {};
+    let dados = {
+      ...estadoInicial,
+      ...dadosSalvos,
+      configuracoes: {
+        ...estadoInicial.configuracoes,
+        ...(dadosSalvos.configuracoes || {})
+      },
+      receitas: Array.isArray(dadosSalvos.receitas) ? dadosSalvos.receitas : [],
+      despesas: Array.isArray(dadosSalvos.despesas) ? dadosSalvos.despesas : [],
+      contas: Array.isArray(dadosSalvos.contas) ? dadosSalvos.contas : [],
+      dizimos: Array.isArray(dadosSalvos.dizimos) ? dadosSalvos.dizimos : [],
+      ofertas: Array.isArray(dadosSalvos.ofertas) ? dadosSalvos.ofertas : [],
+      bingo: Array.isArray(dadosSalvos.bingo) ? dadosSalvos.bingo : [],
+      leilao: Array.isArray(dadosSalvos.leilao) ? dadosSalvos.leilao : [],
+      barraca: Array.isArray(dadosSalvos.barraca) ? dadosSalvos.barraca : [],
+      estoque: Array.isArray(dadosSalvos.estoque) ? dadosSalvos.estoque : []
+    };
+
+    const moeda = valor =>
+      Number(valor || 0).toLocaleString("pt-BR", {
+        style: "currency",
+        currency: "BRL"
+      });
+
+    const hoje = () => new Date().toISOString().split("T")[0];
+
+    async function salvar() {
+      try {
+        localStorage.setItem("sistemaIgrejaDados", JSON.stringify(dados));
+        atualizarTudo();
+
+        const colecoes = ["receitas", "despesas", "ofertas", "bingo", "leilao", "barraca"];
+        for (const colecao of colecoes) {
+          const registros = dados[colecao] || [];
+          for (const registro of registros) {
+            await banco.collection(colecao).doc(String(registro.id)).set(registro);
+          }
+        }
+
+        return true;
+      } catch (erro) {
+        console.error("Erro ao salvar no Firebase:", erro);
+        alert("O cadastro foi salvo neste navegador, mas NÃO foi enviado ao Firebase.\n\nErro: " + (erro.message || erro));
+        return false;
+      }
+    }
+
+    async function carregarFirebase() {
+      const colecoes = ["receitas", "despesas", "ofertas", "bingo", "leilao", "barraca"];
+      try {
+        for (const colecao of colecoes) {
+          const resultado = await banco.collection(colecao).get();
+          dados[colecao] = resultado.docs.map(doc => ({ id: Number(doc.id) || doc.id, ...doc.data() }));
+        }
+        localStorage.setItem("sistemaIgrejaDados", JSON.stringify(dados));
+        atualizarTudo();
+      } catch (erro) {
+        console.error("Erro ao carregar do Firebase:", erro);
+      }
+    }
+
+    function gerarId() {
+      return Date.now() + Math.floor(Math.random() * 1000);
+    }
+
+    function escapar(texto) {
+      return String(texto ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function abrirSecao(id) {
+      document.querySelectorAll(".section").forEach(secao => {
+        secao.classList.remove("active");
+      });
+
+      document.querySelectorAll(".menu button").forEach(botao => {
+        botao.classList.remove("active");
+      });
+
+      document.getElementById(id).classList.add("active");
+
+      const botao = document.querySelector(`[data-section="${id}"]`);
+      if (botao) botao.classList.add("active");
+
+      const nomes = {
+        dashboard: ["Dashboard", "Visão geral da administração da igreja."],
+        caixa: ["Caixa", "Controle geral das entradas e saídas."],
+        receitas: ["Receitas", "Registre todas as entradas financeiras."],
+        despesas: ["Despesas", "Registre os gastos da comunidade."],
+        contas: ["Contas a pagar", "Controle os compromissos financeiros."],
+        relatorios: ["Relatórios", "Resumo financeiro e administrativo."],
+        ofertas: ["Ofertas", "Registro das ofertas recebidas."],
+        bingo: ["Bingo", "Registro das entradas do bingo."],
+        leilao: ["Leilão", "Registro das entradas do leilão."],
+        barraca: ["Barraca", "Registro das entradas da barraca."],
+        configuracoes: ["Configurações", "Dados gerais da comunidade."]
+      };
+
+      document.getElementById("page-title").textContent = nomes[id][0];
+      document.getElementById("page-description").textContent = nomes[id][1];
+
+      if (id === "relatorios") renderizarRelatorio();
+    }
+
+    document.querySelectorAll(".menu button").forEach(botao => {
+      botao.addEventListener("click", () => abrirSecao(botao.dataset.section));
+    });
+
+    function totalReceitas() {
+      return dados.receitas.reduce((total, item) => total + Number(item.valor), 0);
+    }
+
+    function totalDespesas() {
+      return dados.despesas.reduce((total, item) => total + Number(item.valor), 0);
+    }
+
+    function saldo() {
+      return totalReceitas() - totalDespesas();
+    }
+
+    function adicionarReceita(descricao, valor, categoria, data, observacao = "") {
+      dados.receitas.push({
+        id: gerarId(),
+        descricao,
+        valor: Number(valor),
+        categoria,
+        data,
+        observacao
+      });
+    }
+
+    function adicionarDespesa(descricao, valor, categoria, data, observacao = "") {
+      dados.despesas.push({
+        id: gerarId(),
+        descricao,
+        valor: Number(valor),
+        categoria,
+        data,
+        observacao
+      });
+    }
+
+    document.getElementById("formReceita").addEventListener("submit", async event => {
+      event.preventDefault();
+
+      adicionarReceita(
+        receitaDescricao.value,
+        receitaValor.value,
+        receitaCategoria.value,
+        receitaData.value,
+        receitaObservacao.value
+      );
+
+      event.target.reset();
+      receitaData.value = hoje();
+      const salvou = await salvar();
+      if (salvou) alert("Receita salva com sucesso no sistema e no Firebase!");
+    });
+
+    document.getElementById("formDespesa").addEventListener("submit", async event => {
+      event.preventDefault();
+
+      adicionarDespesa(
+        despesaDescricao.value,
+        despesaValor.value,
+        despesaCategoria.value,
+        despesaData.value,
+        despesaObservacao.value
+      );
+
+      event.target.reset();
+      despesaData.value = hoje();
+      const salvou = await salvar();
+      if (salvou) alert("Despesa salva com sucesso no sistema e no Firebase!");
+    });
+
+    document.getElementById("formConta").addEventListener("submit", event => {
+      event.preventDefault();
+
+      dados.contas.push({
+        id: gerarId(),
+        descricao: contaDescricao.value,
+        valor: Number(contaValor.value),
+        vencimento: contaVencimento.value,
+        status: contaStatus.value
+      });
+
+      event.target.reset();
+      salvar();
+      alert("Conta salva com sucesso!");
+    });
+
+    const formDizimo = document.getElementById("formDizimo");
+    if (formDizimo) formDizimo.addEventListener("submit", event => {
+      event.preventDefault();
+
+      const valor = Number(dizimoValor.value);
+
+      dados.dizimos.push({
+        id: gerarId(),
+        nome: dizimoNome.value,
+        valor,
+        tipo: dizimoTipo.value,
+        mes: dizimoMes.value,
+        observacao: dizimoObservacao.value
+      });
+
+      adicionarReceita(
+        `${dizimoTipo.value} - ${dizimoNome.value}`,
+        valor,
+        dizimoTipo.value,
+        `${dizimoMes.value}-01`,
+        dizimoObservacao.value
+      );
+
+      event.target.reset();
+      salvar();
+      alert("Dízimo registrado com sucesso!");
+    });
+
+    document.getElementById("formConfiguracoes").addEventListener("submit", event => {
+      event.preventDefault();
+
+      dados.configuracoes = {
+        nome: configNome.value,
+        comunidade: configComunidade.value,
+        coordenador: configCoordenador.value,
+        tesoureiro: configTesoureiro.value,
+        endereco: configEndereco.value
+      };
+
+      salvar();
+      alert("Configurações salvas!");
+    });
+
+    const buscaMembro = document.getElementById("buscaMembro");
+    if (buscaMembro) buscaMembro.addEventListener("input", renderizarMembros);
+
+    function excluir(tipo, id) {
+      if (!confirm("Deseja realmente excluir este registro?")) return;
+
+      dados[tipo] = dados[tipo].filter(item => item.id !== id);
+      salvar();
+    }
+
+    function renderizarReceitas() {
+      tabelaReceitas.innerHTML = dados.receitas.length
+        ? dados.receitas.map(item => `
+          <tr>
+            <td>${escapar(item.data)}</td>
+            <td>${escapar(item.descricao)}</td>
+            <td>${escapar(item.categoria)}</td>
+            <td>${moeda(item.valor)}</td>
+            <td>
+              <button class="small-btn delete" onclick="excluir('receitas', ${item.id})">Excluir</button>
+            </td>
+          </tr>
+        `).join("")
+        : `<tr><td colspan="5" class="empty">Nenhuma receita registrada.</td></tr>`;
+    }
+
+    function renderizarDespesas() {
+      tabelaDespesas.innerHTML = dados.despesas.length
+        ? dados.despesas.map(item => `
+          <tr>
+            <td>${escapar(item.data)}</td>
+            <td>${escapar(item.descricao)}</td>
+            <td>${escapar(item.categoria)}</td>
+            <td>${moeda(item.valor)}</td>
+            <td>
+              <button class="small-btn delete" onclick="excluir('despesas', ${item.id})">Excluir</button>
+            </td>
+          </tr>
+        `).join("")
+        : `<tr><td colspan="5" class="empty">Nenhuma despesa registrada.</td></tr>`;
+    }
+
+    function renderizarContas() {
+      tabelaContas.innerHTML = dados.contas.length
+        ? dados.contas.map(item => `
+          <tr>
+            <td>${escapar(item.descricao)}</td>
+            <td>${escapar(item.vencimento)}</td>
+            <td>${moeda(item.valor)}</td>
+            <td>
+              <span class="badge ${item.status === "Pago" ? "success" : "warning"}">
+                ${escapar(item.status)}
+              </span>
+            </td>
+            <td>
+              <div class="actions">
+                <button class="small-btn" onclick="alternarConta(${item.id})">
+                  Alterar status
+                </button>
+                <button class="small-btn delete" onclick="excluir('contas', ${item.id})">
+                  Excluir
+                </button>
+              </div>
+            </td>
+          </tr>
+        `).join("")
+        : `<tr><td colspan="5" class="empty">Nenhuma conta cadastrada.</td></tr>`;
+    }
+
+    function alternarConta(id) {
+      const conta = dados.contas.find(item => item.id === id);
+      if (!conta) return;
+
+      conta.status = conta.status === "Pago" ? "Pendente" : "Pago";
+      salvar();
+    }
+
+    function renderizarDizimos() {
+      tabelaDizimos.innerHTML = dados.dizimos.length
+        ? dados.dizimos.map(item => `
+          <tr>
+            <td>${escapar(item.nome)}</td>
+            <td>${escapar(item.mes)}</td>
+            <td>${escapar(item.tipo)}</td>
+            <td>${moeda(item.valor)}</td>
+            <td>
+              <button class="small-btn delete" onclick="excluir('dizimos', ${item.id})">Excluir</button>
+            </td>
+          </tr>
+        `).join("")
+        : `<tr><td colspan="5" class="empty">Nenhum dízimo registrado.</td></tr>`;
+    }
+
+    function renderizarCaixa() {
+      caixaSaldo.textContent = moeda(saldo());
+      caixaEntradas.textContent = moeda(totalReceitas());
+      caixaSaidas.textContent = moeda(totalDespesas());
+
+      const movimentacoes = [
+        ...dados.receitas.map(item => ({ ...item, tipo: "Entrada" })),
+        ...dados.despesas.map(item => ({ ...item, tipo: "Saída" }))
+      ].sort((a, b) => new Date(b.data) - new Date(a.data));
+
+      tabelaCaixa.innerHTML = movimentacoes.length
+        ? movimentacoes.map(item => `
+          <tr>
+            <td>${escapar(item.data)}</td>
+            <td>${escapar(item.descricao)}</td>
+            <td>${escapar(item.categoria)}</td>
+            <td>
+              <span class="badge ${item.tipo === "Entrada" ? "success" : "danger"}">
+                ${item.tipo}
+              </span>
+            </td>
+            <td>${moeda(item.valor)}</td>
+            <td>
+              <button class="small-btn" onclick="abrirSecao('${item.tipo === "Entrada" ? "receitas" : "despesas"}')">
+                Ver
+              </button>
+            </td>
+          </tr>
+        `).join("")
+        : `<tr><td colspan="6" class="empty">Nenhuma movimentação registrada.</td></tr>`;
+    }
+
+    function renderizarDashboard() {
+      dashSaldo.textContent = moeda(saldo());
+      dashReceitas.textContent = moeda(totalReceitas());
+      dashDespesas.textContent = moeda(totalDespesas());
+
+      const movimentacoes = [
+        ...dados.receitas.map(item => ({ ...item, tipo: "Entrada" })),
+        ...dados.despesas.map(item => ({ ...item, tipo: "Saída" }))
+      ].sort((a, b) => new Date(b.data) - new Date(a.data)).slice(0, 8);
+
+      ultimasMovimentacoes.innerHTML = movimentacoes.length
+        ? movimentacoes.map(item => `
+          <tr>
+            <td>${escapar(item.data)}</td>
+            <td>${escapar(item.descricao)}</td>
+            <td>
+              <span class="badge ${item.tipo === "Entrada" ? "success" : "danger"}">
+                ${item.tipo}
+              </span>
+            </td>
+            <td>${moeda(item.valor)}</td>
+          </tr>
+        `).join("")
+        : `<tr><td colspan="4" class="empty">Nenhuma movimentação registrada.</td></tr>`;
+
+      const grafico = document.getElementById("graficoFinanceiro");
+      const valores = [totalReceitas(), totalDespesas()];
+      const maior = Math.max(...valores, 1);
+
+      // Mantém as duas barras sempre visíveis, mesmo quando o valor é zero.
+      const alturaReceitas = valores[0] > 0 ? Math.max((valores[0] / maior) * 170, 18) : 18;
+      const alturaDespesas = valores[1] > 0 ? Math.max((valores[1] / maior) * 170, 18) : 18;
+
+      grafico.innerHTML = `
+        <div class="chart-grid" aria-hidden="true">
+          <span></span><span></span><span></span><span></span><span></span>
+        </div>
+        <div class="bar-item">
+          <strong>${moeda(valores[0])}</strong>
+          <div class="bar-track" aria-label="Barra de receitas">
+            <div class="bar revenue-bar" style="height:${alturaReceitas}px" title="Receitas: ${moeda(valores[0])}"></div>
+          </div>
+          <div class="bar-label">Receitas</div>
+        </div>
+        <div class="bar-item expense">
+          <strong>${moeda(valores[1])}</strong>
+          <div class="bar-track" aria-label="Barra de despesas">
+            <div class="bar" style="height:${alturaDespesas}px" title="Despesas: ${moeda(valores[1])}"></div>
+          </div>
+          <div class="bar-label">Despesas</div>
+        </div>
+      `;
+    }
+
+    function renderizarRelatorio() {
+      const contasPendentes = dados.contas
+        .filter(item => item.status === "Pendente")
+        .reduce((total, item) => total + item.valor, 0);
+
+      relatorioFinanceiro.innerHTML = `
+        <div class="cards">
+          <div class="card">
+            <div class="card-label">Total de receitas</div>
+            <div class="card-value">${moeda(totalReceitas())}</div>
+          </div>
+
+          <div class="card">
+            <div class="card-label">Total de despesas</div>
+            <div class="card-value">${moeda(totalDespesas())}</div>
+          </div>
+
+          <div class="card">
+            <div class="card-label">Saldo</div>
+            <div class="card-value">${moeda(saldo())}</div>
+          </div>
+
+          <div class="card">
+            <div class="card-label">Contas pendentes</div>
+            <div class="card-value">${moeda(contasPendentes)}</div>
+          </div>
+        </div>
+
+        <h3 style="margin:20px 0 10px">Resumo administrativo</h3>
+
+        <p class="muted">Dízimos registrados: ${dados.dizimos.length}</p>
+        <p class="muted">Produtos em estoque: ${(dados.estoque || []).length}</p>
+      `;
+    }
+
+    function carregarConfiguracoes() {
+      configNome.value = dados.configuracoes.nome || "";
+      configComunidade.value = dados.configuracoes.comunidade || "";
+      configCoordenador.value = dados.configuracoes.coordenador || "";
+      configTesoureiro.value = dados.configuracoes.tesoureiro || "";
+      configEndereco.value = dados.configuracoes.endereco || "";
+    }
+
+    function registrarEntrada(tipo, descricao, valor, data, mes) {
+      dados[tipo].push({ id: gerarId(), descricao, valor: Number(valor), data, mes });
+      adicionarReceita(`${tipo} - ${descricao}`, Number(valor), tipo, data);
+    }
+
+    document.getElementById("formOfertas").addEventListener("submit", event => {
+      event.preventDefault();
+      registrarEntrada("ofertas", ofertasDescricao.value, ofertasValor.value, ofertasData.value, ofertasMes.value);
+      event.target.reset(); salvar(); alert("Entrada registrada com sucesso!");
+    });
+
+    function renderizarOfertas() {
+      tabelaofertas.innerHTML = dados.ofertas.length ? dados.ofertas.map(item => `
+        <tr><td>${escapar(item.descricao)}</td><td>${moeda(item.valor)}</td><td>${escapar(item.data)}</td><td>${escapar(item.mes)}</td><td><button class="small-btn delete" onclick="excluir('ofertas', ${item.id})">Excluir</button></td></tr>`).join("") : `<tr><td colspan="5" class="empty">Nenhuma entrada registrada.</td></tr>`;
+    }
+
+    document.getElementById("formBingo").addEventListener("submit", event => {
+      event.preventDefault();
+      registrarEntrada("bingo", bingoDescricao.value, bingoValor.value, bingoData.value, bingoMes.value);
+      event.target.reset(); salvar(); alert("Entrada registrada com sucesso!");
+    });
+
+    function renderizarBingo() {
+      tabelabingo.innerHTML = dados.bingo.length ? dados.bingo.map(item => `
+        <tr><td>${escapar(item.descricao)}</td><td>${moeda(item.valor)}</td><td>${escapar(item.data)}</td><td>${escapar(item.mes)}</td><td><button class="small-btn delete" onclick="excluir('bingo', ${item.id})">Excluir</button></td></tr>`).join("") : `<tr><td colspan="5" class="empty">Nenhuma entrada registrada.</td></tr>`;
+    }
+
+    document.getElementById("formLeilao").addEventListener("submit", event => {
+      event.preventDefault();
+      registrarEntrada("leilao", leilaoDescricao.value, leilaoValor.value, leilaoData.value, leilaoMes.value);
+      event.target.reset(); salvar(); alert("Entrada registrada com sucesso!");
+    });
+
+    function renderizarLeilao() {
+      tabelaleilao.innerHTML = dados.leilao.length ? dados.leilao.map(item => `
+        <tr><td>${escapar(item.descricao)}</td><td>${moeda(item.valor)}</td><td>${escapar(item.data)}</td><td>${escapar(item.mes)}</td><td><button class="small-btn delete" onclick="excluir('leilao', ${item.id})">Excluir</button></td></tr>`).join("") : `<tr><td colspan="5" class="empty">Nenhuma entrada registrada.</td></tr>`;
+    }
+
+    document.getElementById("formBarraca").addEventListener("submit", event => {
+      event.preventDefault();
+      registrarEntrada("barraca", barracaDescricao.value, barracaValor.value, barracaData.value, barracaMes.value);
+      event.target.reset(); salvar(); alert("Entrada registrada com sucesso!");
+    });
+
+    function renderizarBarraca() {
+      tabelabarraca.innerHTML = dados.barraca.length ? dados.barraca.map(item => `
+        <tr><td>${escapar(item.descricao)}</td><td>${moeda(item.valor)}</td><td>${escapar(item.data)}</td><td>${escapar(item.mes)}</td><td><button class="small-btn delete" onclick="excluir('barraca', ${item.id})">Excluir</button></td></tr>`).join("") : `<tr><td colspan="5" class="empty">Nenhuma entrada registrada.</td></tr>`;
+    }
+
+    
+    function atualizarTudo() {
+      renderizarDashboard();
+      renderizarCaixa();
+      renderizarReceitas();
+      renderizarDespesas();
+      renderizarContas();
+        renderizarOfertas();
+      renderizarBingo();
+      renderizarLeilao();
+      renderizarBarraca();
+      carregarConfiguracoes();
+      renderizarRelatorio();
+    }
+
+    function exportarDados() {
+      const arquivo = new Blob(
+        [JSON.stringify(dados, null, 2)],
+        { type: "application/json" }
+      );
+
+      const url = URL.createObjectURL(arquivo);
+      const link = document.createElement("a");
+
+      link.href = url;
+      link.download = "backup-sistema-igreja.json";
+      link.click();
+
+      URL.revokeObjectURL(url);
+    }
+
+    function importarDados() {
+      document.getElementById("arquivoImportacao").click();
+    }
+
+    document.getElementById("arquivoImportacao").addEventListener("change", event => {
+      const arquivo = event.target.files[0];
+      if (!arquivo) return;
+
+      const leitor = new FileReader();
+
+      leitor.onload = resultado => {
+        try {
+          dados = JSON.parse(resultado.target.result);
+          salvar();
+          alert("Backup importado com sucesso!");
+        } catch {
+          alert("Arquivo inválido.");
+        }
+      };
+
+      leitor.readAsText(arquivo);
+    });
+
+    function imprimirRelatorio() {
+      const conteudo = document.getElementById("relatorioFinanceiro").innerHTML;
+      const janela = window.open("", "_blank");
+
+      janela.document.write(`
+        <html>
+          <head>
+            <title>Relatório da Igreja</title>
+            <style>
+              body { font-family: Arial; padding: 30px; }
+              .card { border: 1px solid #ccc; padding: 15px; margin: 10px 0; }
+            </style>
+          </head>
+          <body>
+            <h1>${escapar(dados.configuracoes.nome)}</h1>
+            <h2>Relatório financeiro</h2>
+            ${conteudo}
+          </body>
+        </html>
+      `);
+
+      janela.document.close();
+      janela.print();
+    }
+
+    document.getElementById("receitaData").value = hoje();
+    document.getElementById("despesaData").value = hoje();
+    ["cantinaData", "leilaoData", "sacramentoData", "documentoData"].forEach(id => {
+      const campo = document.getElementById(id);
+      if (campo) campo.value = hoje();
+    });
+
+  </script>
+</body>
+</html>
