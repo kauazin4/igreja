@@ -953,17 +953,20 @@
             <h3>Relatório financeiro</h3>
             <button class="btn" onclick="imprimirRelatorio()">🖨 Imprimir</button>
           </div>
+
           <div class="form-grid" style="margin-bottom:16px">
             <div class="form-group">
-              <label for="relatorioMes">Mês de referência</label>
-              <input id="relatorioMes" type="month" onchange="renderizarRelatorio()">
+              <label for="relatorioMes">Mês do relatório</label>
+              <input id="relatorioMes" type="month">
             </div>
             <div class="form-group">
-              <label for="percentualMatriz">Porcentagem enviada à igreja matriz (%)</label>
-              <input id="percentualMatriz" type="number" min="0" max="100" step="0.01" value="77" onchange="salvarPercentualMatriz()">
+              <label for="percentualMatriz">Porcentagem enviada à matriz (%)</label>
+              <input id="percentualMatriz" type="number" min="0" max="100" step="0.01" placeholder="Ex.: 77">
             </div>
           </div>
-
+          <div class="form-actions" style="margin-bottom:16px">
+            <button class="btn" type="button" onclick="salvarRepasseMensal()">Salvar porcentagem do mês</button>
+          </div>
           <div id="relatorioFinanceiro"></div>
         </div>
       </section>
@@ -1205,10 +1208,11 @@
             await banco.collection(colecao).doc(String(registro.id)).set(registro);
           }
         }
+
         return true;
       } catch (erro) {
         console.error("Erro ao salvar no Firebase:", erro);
-        alert("Não foi possível concluir a operação no Firebase.\n\nErro: " + (erro.message || erro));
+        alert("O cadastro foi salvo neste navegador, mas NÃO foi enviado ao Firebase.\n\nErro: " + (erro.message || erro));
         return false;
       }
     }
@@ -1278,50 +1282,70 @@
       botao.addEventListener("click", () => abrirSecao(botao.dataset.section));
     });
 
+    function mesDoRegistro(item) {
+      if (item.mes) return String(item.mes).slice(0, 7);
+      if (item.data) return String(item.data).slice(0, 7);
+      return "sem-data";
+    }
+
     function totalReceitas() {
-      // Entradas gerais + todo o dinheiro registrado em Ofertas, Bingo,
-      // Leilão e Barraca. Os lançamentos automáticos antigos dessas áreas
-      // ficam fora da soma para não contar o mesmo dinheiro duas vezes.
-      const tiposComunitarios = ["ofertas", "bingo", "leilao", "barraca"];
-      const receitasGerais = (dados.receitas || [])
-        .filter(item => !tiposComunitarios.includes(String(item.categoria || "").toLowerCase()))
-        .reduce((total, item) => total + Number(item.valor || 0), 0);
+      return (dados.receitas || []).reduce((total, item) => total + Number(item.valor || 0), 0);
+    }
 
-      const entradasComunitarias = tiposComunitarios.reduce((total, tipo) => {
-        return total + (dados[tipo] || []).reduce((subtotal, item) => subtotal + Number(item.valor || 0), 0);
-      }, 0);
-
-      return receitasGerais + entradasComunitarias;
+    function totalDizimos() {
+      return (dados.dizimos || []).reduce((total, item) => total + Number(item.valor || 0), 0);
     }
 
     function totalDespesas() {
-      return dados.despesas.reduce((total, item) => total + Number(item.valor), 0);
+      return (dados.despesas || []).reduce((total, item) => total + Number(item.valor || 0), 0);
     }
 
     function saldo() {
-      return totalReceitas() - totalDespesas();
+      return totalReceitas() + totalDizimos() - totalDespesas();
     }
 
     function adicionarReceita(descricao, valor, categoria, data, observacao = "") {
       dados.receitas.push({
-        id: gerarId(),
-        descricao,
-        valor: Number(valor),
-        categoria,
-        data,
-        observacao
+        id: gerarId(), descricao, valor: Number(valor), categoria, data,
+        mes: String(data || hoje()).slice(0, 7), observacao
       });
     }
 
     function adicionarDespesa(descricao, valor, categoria, data, observacao = "") {
       dados.despesas.push({
-        id: gerarId(),
-        descricao,
-        valor: Number(valor),
-        categoria,
-        data,
-        observacao
+        id: gerarId(), descricao, valor: Number(valor), categoria, data,
+        mes: String(data || hoje()).slice(0, 7), observacao
       });
+    }
+
+    function obterMesAtual() {
+      return hoje().slice(0, 7);
+    }
+
+    function valorDoMes(lista, mes) {
+      return (lista || []).reduce((total, item) => {
+        return total + (mesDoRegistro(item) === mes ? Number(item.valor || 0) : 0);
+      }, 0);
+    }
+
+    function percentualDoMes(mes) {
+      const mapa = dados.repassesMensais || {};
+      return Number.isFinite(Number(mapa[mes])) ? Number(mapa[mes]) : 0;
+    }
+
+    function salvarRepasseMensal() {
+      const mes = document.getElementById("relatorioMes").value || obterMesAtual();
+      const campo = document.getElementById("percentualMatriz");
+      const percentual = Number(campo.value);
+      if (!Number.isFinite(percentual) || percentual < 0 || percentual > 100) {
+        alert("Informe uma porcentagem entre 0 e 100.");
+        return;
+      }
+      dados.repassesMensais = dados.repassesMensais || {};
+      dados.repassesMensais[mes] = percentual;
+      salvar();
+      renderizarRelatorio();
+      alert("Porcentagem do mês salva com sucesso!");
     }
 
     document.getElementById("formReceita").addEventListener("submit", async event => {
@@ -1389,14 +1413,6 @@
         observacao: dizimoObservacao.value
       });
 
-      adicionarReceita(
-        `${dizimoTipo.value} - ${dizimoNome.value}`,
-        valor,
-        dizimoTipo.value,
-        `${dizimoMes.value}-01`,
-        dizimoObservacao.value
-      );
-
       event.target.reset();
       salvar();
       alert("Dízimo registrado com sucesso!");
@@ -1423,46 +1439,79 @@
     async function excluir(tipo, id) {
       if (!confirm("Deseja realmente excluir este registro?")) return;
 
-      const idTexto = String(id);
+      dados[tipo] = (dados[tipo] || []).filter(item => String(item.id) !== String(id));
+      localStorage.setItem("sistemaIgrejaDados", JSON.stringify(dados));
+      atualizarTudo();
+
       const colecoesFirebase = ["receitas", "despesas", "ofertas", "bingo", "leilao", "barraca"];
-
-      try {
-        dados[tipo] = (dados[tipo] || []).filter(item => String(item.id) !== idTexto);
-        localStorage.setItem("sistemaIgrejaDados", JSON.stringify(dados));
-        atualizarTudo();
-
-        if (colecoesFirebase.includes(tipo)) {
-          await banco.collection(tipo).doc(idTexto).delete();
+      if (colecoesFirebase.includes(tipo)) {
+        try {
+          await banco.collection(tipo).doc(String(id)).delete();
+        } catch (erro) {
+          console.error("Erro ao excluir do Firebase:", erro);
+          alert("O registro foi retirado deste navegador, mas não foi excluído do Firebase.");
         }
-
-        alert("Registro excluído com sucesso!");
-      } catch (erro) {
-        console.error("Erro ao excluir:", erro);
-        alert("Não foi possível excluir do Firebase.\n\nErro: " + (erro.message || erro));
-        await carregarFirebase();
       }
     }
 
     async function editar(tipo, id) {
       const item = (dados[tipo] || []).find(registro => String(registro.id) === String(id));
-      if (!item) return alert("Registro não encontrado.");
+      if (!item) return;
 
-      const campos = Object.keys(item).filter(campo => campo !== "id");
-      const alterado = { ...item };
-
-      for (const campo of campos) {
-        const resposta = prompt("Editar " + campo + ":", alterado[campo] ?? "");
-        if (resposta === null) return;
-        alterado[campo] = campo === "valor" || campo === "total" || campo === "meta" || campo === "arrecadado" || campo === "quantidade"
-          ? Number(resposta)
-          : resposta;
+      if (tipo === "receitas" || tipo === "despesas") {
+        const descricao = prompt("Descrição:", item.descricao ?? "");
+        if (descricao === null) return;
+        const valor = prompt("Valor:", item.valor ?? "");
+        if (valor === null) return;
+        const categoria = prompt("Categoria:", item.categoria ?? "");
+        if (categoria === null) return;
+        const data = prompt("Data (AAAA-MM-DD):", item.data ?? "");
+        if (data === null) return;
+        item.descricao = descricao;
+        item.valor = Number(valor);
+        item.categoria = categoria;
+        item.data = data;
+        item.mes = String(data).slice(0, 7);
+      } else if (tipo === "dizimos") {
+        const nome = prompt("Nome:", item.nome ?? "");
+        if (nome === null) return;
+        const valor = prompt("Valor:", item.valor ?? "");
+        if (valor === null) return;
+        const tipoDizimo = prompt("Tipo:", item.tipo ?? "");
+        if (tipoDizimo === null) return;
+        const mes = prompt("Mês (AAAA-MM):", item.mes ?? "");
+        if (mes === null) return;
+        item.nome = nome;
+        item.valor = Number(valor);
+        item.tipo = tipoDizimo;
+        item.mes = mes;
+      } else if (["ofertas", "bingo", "leilao", "barraca"].includes(tipo)) {
+        const descricao = prompt("Descrição:", item.descricao ?? "");
+        if (descricao === null) return;
+        const valor = prompt("Valor:", item.valor ?? "");
+        if (valor === null) return;
+        const data = prompt("Data (AAAA-MM-DD):", item.data ?? "");
+        if (data === null) return;
+        const mes = prompt("Mês (AAAA-MM):", item.mes ?? String(data).slice(0, 7));
+        if (mes === null) return;
+        item.descricao = descricao;
+        item.valor = Number(valor);
+        item.data = data;
+        item.mes = mes;
+      } else if (tipo === "contas") {
+        const descricao = prompt("Descrição:", item.descricao ?? "");
+        if (descricao === null) return;
+        const valor = prompt("Valor:", item.valor ?? "");
+        if (valor === null) return;
+        const vencimento = prompt("Vencimento:", item.vencimento ?? "");
+        if (vencimento === null) return;
+        item.descricao = descricao;
+        item.valor = Number(valor);
+        item.vencimento = vencimento;
       }
 
-      const indice = dados[tipo].findIndex(registro => String(registro.id) === String(id));
-      dados[tipo][indice] = alterado;
-
-      const salvou = await salvar();
-      if (salvou) alert("Registro editado e salvo no Firebase!");
+      await salvar();
+      alert("Registro editado com sucesso!");
     }
 
     function renderizarReceitas() {
@@ -1515,6 +1564,9 @@
               <div class="actions">
                 <button class="small-btn" onclick="alternarConta(${item.id})">
                   Alterar status
+                </button>
+                <button class="small-btn" onclick="editar('contas', ${item.id})">
+                  Editar
                 </button>
                 <button class="small-btn delete" onclick="excluir('contas', ${item.id})">
                   Excluir
@@ -1637,66 +1689,88 @@
       `;
     }
 
-    function mesDoItem(item) {
-      if (item.mes) return String(item.mes).slice(0, 7);
-      if (item.data) return String(item.data).slice(0, 7);
-      return "";
-    }
-
-    function totaisDoMes(mes) {
-      const tiposComunitarios = ["ofertas", "bingo", "leilao", "barraca"];
-      const receitasGerais = (dados.receitas || [])
-        .filter(item => !tiposComunitarios.includes(String(item.categoria || "").toLowerCase()))
-        .filter(item => mesDoItem(item) === mes)
-        .reduce((total, item) => total + Number(item.valor || 0), 0);
-      const comunitarias = tiposComunitarios.reduce((total, tipo) => total + (dados[tipo] || [])
-        .filter(item => mesDoItem(item) === mes)
-        .reduce((subtotal, item) => subtotal + Number(item.valor || 0), 0), 0);
-      const despesas = (dados.despesas || [])
-        .filter(item => mesDoItem(item) === mes)
-        .reduce((total, item) => total + Number(item.valor || 0), 0);
-      return { receitas: receitasGerais + comunitarias, despesas, saldo: receitasGerais + comunitarias - despesas };
-    }
-
-    function salvarPercentualMatriz() {
-      const campo = document.getElementById("percentualMatriz");
-      const valor = Math.min(100, Math.max(0, Number(campo.value || 0)));
-      campo.value = valor;
-      localStorage.setItem("percentualMatriz", String(valor));
-      renderizarRelatorio();
-    }
-
     function renderizarRelatorio() {
-      const campoMes = document.getElementById("relatorioMes");
-      if (!campoMes.value) campoMes.value = new Date().toISOString().slice(0, 7);
-      const percentualSalvo = localStorage.getItem("percentualMatriz");
-      if (percentualSalvo !== null) document.getElementById("percentualMatriz").value = percentualSalvo;
-      const mes = campoMes.value;
-      const totais = totaisDoMes(mes);
-      const percentual = Math.min(100, Math.max(0, Number(document.getElementById("percentualMatriz").value || 0)));
-      const enviado = totais.saldo > 0 ? totais.saldo * percentual / 100 : 0;
-      const ficaNaComunidade = totais.saldo - enviado;
-      const contasPendentes = dados.contas
+      const mesCampo = document.getElementById("relatorioMes");
+      const percentualCampo = document.getElementById("percentualMatriz");
+      const mes = mesCampo.value || obterMesAtual();
+      if (!mesCampo.value) mesCampo.value = mes;
+
+      const percentual = percentualDoMes(mes);
+      percentualCampo.value = percentual;
+
+      // Receitas cadastradas com a categoria "Dízimo" não entram no repasse.
+      // Elas são consideradas integralmente como dízimos da capela.
+      const receitasDoMes = (dados.receitas || []).filter(item => mesDoRegistro(item) === mes);
+      const receitasDizimoMes = receitasDoMes
+        .filter(item => String(item.categoria || '').trim().toLowerCase() === 'dízimo' || String(item.categoria || '').trim().toLowerCase() === 'dizimo')
+        .reduce((total, item) => total + Number(item.valor || 0), 0);
+      const entradasMes = receitasDoMes
+        .filter(item => {
+          const categoria = String(item.categoria || '').trim().toLowerCase();
+          return categoria !== 'dízimo' && categoria !== 'dizimo';
+        })
+        .reduce((total, item) => total + Number(item.valor || 0), 0);
+      const dizimosMes = valorDoMes(dados.dizimos, mes) + receitasDizimoMes;
+      const despesasMes = valorDoMes(dados.despesas, mes);
+      const baseRepasse = entradasMes;
+      const enviadoMatriz = baseRepasse * percentual / 100;
+      const ficouCapelaMes = entradasMes - enviadoMatriz + dizimosMes - despesasMes;
+
+      const mesesAnteriores = new Set([
+        ...((dados.receitas || []).map(mesDoRegistro)),
+        ...((dados.dizimos || []).map(mesDoRegistro)),
+        ...((dados.despesas || []).map(mesDoRegistro))
+      ]);
+      const saldoAnterior = [...mesesAnteriores]
+        .filter(m => m !== "sem-data" && m < mes)
+        .sort()
+        .reduce((acumulado, m) => {
+          const receitasDoMesAnterior = (dados.receitas || []).filter(item => mesDoRegistro(item) === m);
+          const entradas = receitasDoMesAnterior
+            .filter(item => {
+              const categoria = String(item.categoria || '').trim().toLowerCase();
+              return categoria !== 'dízimo' && categoria !== 'dizimo';
+            })
+            .reduce((total, item) => total + Number(item.valor || 0), 0);
+          const dizimosDeReceitas = receitasDoMesAnterior
+            .filter(item => {
+              const categoria = String(item.categoria || '').trim().toLowerCase();
+              return categoria === 'dízimo' || categoria === 'dizimo';
+            })
+            .reduce((total, item) => total + Number(item.valor || 0), 0);
+          const dizimos = valorDoMes(dados.dizimos, m) + dizimosDeReceitas;
+          const despesas = valorDoMes(dados.despesas, m);
+          const repasse = entradas * percentualDoMes(m) / 100;
+          return acumulado + entradas - repasse + dizimos - despesas;
+        }, 0);
+
+      const saldoAcumulado = saldoAnterior + ficouCapelaMes;
+      const contasPendentes = (dados.contas || [])
         .filter(item => item.status === "Pendente")
         .reduce((total, item) => total + Number(item.valor || 0), 0);
 
       relatorioFinanceiro.innerHTML = `
-        <p class="muted">Relatório referente ao mês: <strong>${mes}</strong></p>
         <div class="cards">
-          <div class="card"><div class="card-label">Entradas do mês</div><div class="card-value">${moeda(totais.receitas)}</div></div>
-          <div class="card"><div class="card-label">Despesas do mês</div><div class="card-value">${moeda(totais.despesas)}</div></div>
-          <div class="card"><div class="card-label">Saldo do mês</div><div class="card-value">${moeda(totais.saldo)}</div></div>
-          <div class="card"><div class="card-label">Saldo acumulado da igreja</div><div class="card-value">${moeda(saldo())}</div></div>
+          <div class="card"><div class="card-label">Entradas do mês</div><div class="card-value">${moeda(entradasMes + dizimosMes)}</div></div>
+          <div class="card"><div class="card-label">Despesas do mês</div><div class="card-value">${moeda(despesasMes)}</div></div>
+          <div class="card"><div class="card-label">Enviado à matriz</div><div class="card-value">${moeda(enviadoMatriz)}</div></div>
+          <div class="card"><div class="card-label">Saldo acumulado</div><div class="card-value">${moeda(saldoAcumulado)}</div></div>
         </div>
-        <h3 style="margin:20px 0 10px">Divisão do saldo do mês</h3>
-        <div class="cards">
-          <div class="card"><div class="card-label">Enviado à igreja matriz (${percentual}%)</div><div class="card-value">${moeda(enviado)}</div></div>
-          <div class="card"><div class="card-label">Fica na nossa comunidade</div><div class="card-value">${moeda(ficaNaComunidade)}</div></div>
+        <div class="panel" style="margin-top:16px;padding:16px">
+          <h3>Resumo de ${escapar(mes)}</h3>
+          <p>Saldo trazido dos meses anteriores: <strong>${moeda(saldoAnterior)}</strong></p>
+          <p>Entradas comuns sujeitas ao repasse: <strong>${moeda(entradasMes)}</strong></p>
+          <p>Dízimos — 100% ficam na capela: <strong>${moeda(dizimosMes)}</strong></p>
+          <p>Porcentagem enviada à matriz: <strong>${percentual}%</strong></p>
+          <p>Despesas do mês: <strong>${moeda(despesasMes)}</strong></p>
+          <p>Saldo que ficou na capela neste mês: <strong>${moeda(ficouCapelaMes)}</strong></p>
+          <p><strong>Saldo final acumulado da capela: ${moeda(saldoAcumulado)}</strong></p>
+          <p class="muted">Contas pendentes: ${moeda(contasPendentes)}</p>
         </div>
-        <p class="muted">Contas pendentes: ${moeda(contasPendentes)}</p>
-        <p class="muted">Dízimos registrados: ${dados.dizimos.length} · Produtos em estoque: ${(dados.estoque || []).length}</p>
       `;
     }
+
+    document.getElementById("relatorioMes").addEventListener("change", renderizarRelatorio);
 
     function carregarConfiguracoes() {
       configNome.value = dados.configuracoes.nome || "";
@@ -1719,8 +1793,7 @@
 
     function renderizarOfertas() {
       tabelaofertas.innerHTML = dados.ofertas.length ? dados.ofertas.map(item => `
-        <tr><td>${escapar(item.descricao)}</td><td>${moeda(item.valor)}</td><td>${escapar(item.data)}</td><td>${escapar(item.mes)}</td><td><button class="small-btn" onclick="editar('ofertas', ${item.id})">Editar</button>
-              <button class="small-btn delete" onclick="excluir('ofertas', ${item.id})">Excluir</button></td></tr>`).join("") : `<tr><td colspan="5" class="empty">Nenhuma entrada registrada.</td></tr>`;
+        <tr><td>${escapar(item.descricao)}</td><td>${moeda(item.valor)}</td><td>${escapar(item.data)}</td><td>${escapar(item.mes)}</td><td><button class="small-btn" onclick="editar('ofertas', ${item.id})">Editar</button><button class="small-btn delete" onclick="excluir('ofertas', ${item.id})">Excluir</button></td></tr>`).join("") : `<tr><td colspan="5" class="empty">Nenhuma entrada registrada.</td></tr>`;
     }
 
     document.getElementById("formBingo").addEventListener("submit", event => {
@@ -1731,8 +1804,7 @@
 
     function renderizarBingo() {
       tabelabingo.innerHTML = dados.bingo.length ? dados.bingo.map(item => `
-        <tr><td>${escapar(item.descricao)}</td><td>${moeda(item.valor)}</td><td>${escapar(item.data)}</td><td>${escapar(item.mes)}</td><td><button class="small-btn" onclick="editar('bingo', ${item.id})">Editar</button>
-              <button class="small-btn delete" onclick="excluir('bingo', ${item.id})">Excluir</button></td></tr>`).join("") : `<tr><td colspan="5" class="empty">Nenhuma entrada registrada.</td></tr>`;
+        <tr><td>${escapar(item.descricao)}</td><td>${moeda(item.valor)}</td><td>${escapar(item.data)}</td><td>${escapar(item.mes)}</td><td><button class="small-btn" onclick="editar('bingo', ${item.id})">Editar</button><button class="small-btn delete" onclick="excluir('bingo', ${item.id})">Excluir</button></td></tr>`).join("") : `<tr><td colspan="5" class="empty">Nenhuma entrada registrada.</td></tr>`;
     }
 
     document.getElementById("formLeilao").addEventListener("submit", event => {
@@ -1743,8 +1815,7 @@
 
     function renderizarLeilao() {
       tabelaleilao.innerHTML = dados.leilao.length ? dados.leilao.map(item => `
-        <tr><td>${escapar(item.descricao)}</td><td>${moeda(item.valor)}</td><td>${escapar(item.data)}</td><td>${escapar(item.mes)}</td><td><button class="small-btn" onclick="editar('leilao', ${item.id})">Editar</button>
-              <button class="small-btn delete" onclick="excluir('leilao', ${item.id})">Excluir</button></td></tr>`).join("") : `<tr><td colspan="5" class="empty">Nenhuma entrada registrada.</td></tr>`;
+        <tr><td>${escapar(item.descricao)}</td><td>${moeda(item.valor)}</td><td>${escapar(item.data)}</td><td>${escapar(item.mes)}</td><td><button class="small-btn" onclick="editar('leilao', ${item.id})">Editar</button><button class="small-btn delete" onclick="excluir('leilao', ${item.id})">Excluir</button></td></tr>`).join("") : `<tr><td colspan="5" class="empty">Nenhuma entrada registrada.</td></tr>`;
     }
 
     document.getElementById("formBarraca").addEventListener("submit", event => {
@@ -1755,8 +1826,7 @@
 
     function renderizarBarraca() {
       tabelabarraca.innerHTML = dados.barraca.length ? dados.barraca.map(item => `
-        <tr><td>${escapar(item.descricao)}</td><td>${moeda(item.valor)}</td><td>${escapar(item.data)}</td><td>${escapar(item.mes)}</td><td><button class="small-btn" onclick="editar('barraca', ${item.id})">Editar</button>
-              <button class="small-btn delete" onclick="excluir('barraca', ${item.id})">Excluir</button></td></tr>`).join("") : `<tr><td colspan="5" class="empty">Nenhuma entrada registrada.</td></tr>`;
+        <tr><td>${escapar(item.descricao)}</td><td>${moeda(item.valor)}</td><td>${escapar(item.data)}</td><td>${escapar(item.mes)}</td><td><button class="small-btn" onclick="editar('barraca', ${item.id})">Editar</button><button class="small-btn delete" onclick="excluir('barraca', ${item.id})">Excluir</button></td></tr>`).join("") : `<tr><td colspan="5" class="empty">Nenhuma entrada registrada.</td></tr>`;
     }
 
     
